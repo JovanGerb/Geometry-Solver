@@ -1081,7 +1081,7 @@ class Gelijkvormigheid(Ontdekking):
                         A2,B2,C2 = [A,B,C][k:] + [A,B,C][:k]
                         D2,E2,F2 = [D,E,F][k:] + [D,E,F][:k]
                         for lijn in Lijn((A,B,C), waarheid=False), Lijn((D,E,F), waarheid=False):
-                            Bewijs(Verhouding(( ((A2,B2), (D2,F2)), ((A2,C2), (D2,E2)) )), (h[0][i], h[1][j], lijn.vind_bewijs()), "the sine rule")
+                            Bewijs(Verhouding(( ((A2,B2), (D2,F2)), ((A2,C2), (D2,E2)) )), (h[0][i], h[1][j], lijn.vind_bewijs()), "the sine rule", lastigheid = 10)
 
 
 
@@ -1393,6 +1393,25 @@ HoekMod180 B,C+=A,H+ 90
 HoekMod180 D,L+A,K=A,L+K,L
 HoekMod180 D,K+A,L=A,K+K,L
 
+
+
+'''
+# lemma 7 (ii)
+'''
+A B C D E F I P
+Lijn D,P,F
+Lijn A,B,C None False False
+Lijn A,B,F
+Lijn A,E,C
+Lijn D,B,C
+Lijn A,I,P
+HoekMod180 A,P+=C,P+ 90
+HoekMod360 A,I+A,I=A,B+A,C
+HoekMod360 B,I+B,I=B,A+B,C
+HoekMod360 C,I+C,I=C,A+C,B
+HoekMod180 I,D+=B,C+ 90
+HoekMod180 I,E+=A,C+ 90
+HoekMod180 I,F+=A,B+ 90
 
 
 '''
