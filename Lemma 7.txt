@@ -1,0 +1,58 @@
+Point P lies on line DF where D and F are the points of tangency of the incircle.
+
+(001)A, B, F lie on a line                                                   because of given
+(002)B, C, D lie on a line                                                   because of given
+(003) <DBF           = <DBA           (mod 180)    from (001)                because of points on a line
+                     = <CBA           (mod 180)    from (002)                because of points on a line
+                     = <(BC, FI) + 90°(mod 180)                              because of given
+                     = <DIF           (mod 180)                              because of given
+(004)B, D, F, I lie on a circle                    from (003)                because of cyclic angles
+(005)A, I, P lie on a line                                                   because of given
+(006) <DIP           = <(BC, IP) + 90°(mod 180)                              because of given
+                     = <(BC, AP) + 90°(mod 180)    from (005)                because of points on a line
+                     = <BCP           (mod 180)                              because of given
+                     = <DCP           (mod 180)    from (002)                because of points on a line
+(007)C, D, I, P lie on a circle                    from (006)                because of cyclic angles
+(008)<BAI = <IAC mod 360                                                     because of given
+(009)A, B, C don't lie on a line                                             because of given
+(010)<ABI = <IBC mod 360                                                     because of given
+(011) <PDI           = <PCI           (mod 180)    from (007)                because of cyclic angles
+                     = <(AP, CI) + 90°(mod 180)                              because of given
+                     = <AIC + 90°     (mod 180)    from (005)                because of points on a line
+                     = <ABI           (mod 180)    from (008), (009), (010)  because of the inscribed circle
+                     = <FBI           (mod 180)    from (001)                because of points on a line
+                     = <FDI           (mod 180)    from (004)                because of cyclic angles
+(012)D, F, P lie on a line                         from (011)                because of three points on a line
+
+
+
+
+
+
+Point P lies on DE where D and E are the midpoints of segments BC and AC.
+
+(001)A, E, C lie in that order on a line                                     because of given
+(002)B, D, C lie in that order on a line                                     because of given
+(003) <(AE, CD)      = <(AE, BD) + 180°(mod 360)    from (002)                because of points ordered on a line
+                     = <(CE, BD)      (mod 360)    from (001)                because of points ordered on a line
+(004)|AE| = |CE|                                                             because of given
+(005)|BD| = |CD|                                                             because of given
+(006)|AE| * |CD| = |BD| * |CE|                     from (004), (005)         because of combining
+(007)▲ACE ~ ▲BCD, with opposite orientation        from (003), (006)         because of (SAS) similarity
+(008)|AC| * |CD| = |BC| * |CE|                     from (007)                because of similarity
+(009) <ACB           = <ACD           (mod 360)    from (002)                because of points ordered on a line
+                     = <ECD           (mod 360)    from (001)                because of points ordered on a line
+(010)▲ABC ~ ▲EDC, with equal orientation           from (008), (009)         because of (SAS) similarity
+(011) <(AB, ED)      = <ACE           (mod 180)    from (010)                because of similarity
+                     = 0°             (mod 180)    from (001)                because of points ordered on a line
+(012)A, C, E lie on a line                         from (001)                because of the same line
+(013)AP and CP are perpendicular                                             because of given
+(014)A, C, P lie on a circle with midpoint E       from (004), (012), (013)  because of Thales
+(015)A, I, P lie on a line                                                   because of given
+(016) <(AI, PE)      = <APE           (mod 180)    from (015)                because of points on a line
+                     = <CPE + 90°     (mod 180)                              because of given
+                     = <CAP           (mod 180)    from (014)                because of the central angle theorem
+                     = <CAI           (mod 180)    from (015)                because of points on a line
+                     = <IAB           (mod 180)                              because of given
+(017)PE||ED                                        from (011), (016)         because of combining
+(018)P, E, D lie on a line                         from (017)                because of three points on a line

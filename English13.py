@@ -9,7 +9,7 @@ from collections import defaultdict, Counter
 should_it_output_some_interesting_found_things = True
 should_it_output_everything_that_it_finds = False
 allow_proof_by_contradiction = False
-
+complexity_levels_per_loop = 30
 
 
 class Bewijs:
@@ -28,16 +28,6 @@ class Bewijs:
             else:
                 self.redenen = set(redenen)
                 self.stelling = stelling
-                while True:
-                    #sommige tussenstappen zijn triviaal, dus die wil ik overslaan: als een reden niet een belangrijke_tussenstap is,
-                    #sla ik die over en vervang ik die met de redenen daarvoor
-                    for reden in self.redenen:
-                        if not reden.bewezene.belangrijke_tussenstap and not isinstance(reden, Hoekenjaging):
-                            self.redenen.remove(reden)
-                            self.redenen.update(reden.redenen)
-                            break
-                    else:
-                        break
                 self.complexiteit = sum((reden.complexiteit for reden in self.redenen), start=lastigheid)
 
             self.gebruik_bewijs()
@@ -45,7 +35,7 @@ class Bewijs:
     def gebruik_bewijs(self):
         tegengestelde_bewijs, bestaand_bewijs = self.bewezene.bewijzen.get(self.bewezene, (None, None)) [:: 2 * self.bewezene.waarheid - 1]
         #Hier zeg ik dat een bewijs ingewikkelder dan de bestaande oplossing niet mag:
-        self.nuttig = (bestaand_bewijs == None or bestaand_bewijs.complexiteit > self.complexiteit) and (Ontdekking.bewijsefficientie == None or self.complexiteit < Ontdekking.bewijsefficientie)
+        self.nuttig = (bestaand_bewijs == None or bestaand_bewijs.complexiteit > self.complexiteit)
         if self.nuttig:
             self.gebruikt = False
 
@@ -55,7 +45,10 @@ class Bewijs:
 
             self.bewezene.bewijs = self #zo kun je het bewijs later terugvinden als je de stelling self.bewezene hebt.
             self.bewezene.bewijzen[self.bewezene] = (tegengestelde_bewijs, self) [:: 2 * self.bewezene.waarheid - 1] #nu zit het bewezene in de lijst van alle bewezen dingen
-            Ontdekking.ToDoList.append(self.bewezene) #ik moet later het bewezene proberen te gebruiken.
+            # try:
+            Ontdekking.ToDoList[self.complexiteit].append(self.bewezene) #ik moet later het bewezene proberen te gebruiken.
+            # except IndexError:
+            #     pass
             self.bewezene.triviaal()
             #ook als dit niet een nieuw bewijs is maar een efficienter bewijs, moet ik kijken of dit andere dingen bewijst. (Dit lijkt echter inefficient te kunnen worden.)
             if self.bewezene.waarheid:
@@ -63,26 +56,19 @@ class Bewijs:
 
             if allow_proof_by_contradiction:
                 if tegengestelde_bewijs != None:
-                    #Als er tegenstelling is
-                    if Ontdekking.bewijsefficientie == None or Ontdekking.bewijsefficientie > self.complexiteit + tegengestelde_bewijs.complexiteit:
-                        self.beschrijf_tegenstelling(tegengestelde_bewijs)
-                        Ontdekking.bewijsefficientie = self.complexiteit + tegengestelde_bewijs.complexiteit
+                    self.beschrijf_tegenstelling(tegengestelde_bewijs)
+                    raise Exception("done :)")
             else:
                 if self.bewezene == objective:
-                    if Ontdekking.bewijsefficientie == None or Ontdekking.bewijsefficientie > self.complexiteit:
-                        self.printen()
-                        print(time() - t0, "complexity:", self.complexiteit, "\n")
-
-                        Ontdekking.bewijsefficientie = self.complexiteit
+                    self.printen()
+                    print(time() - t0, "complexity:", self.complexiteit, "\n")
+                    raise Exception("done :)")
 
     def __eq__(self, other):
         return None != other and self.bewezene.echtgelijk(other.bewezene)
 
     def __hash__(self):
         return hash((self.bewezene.key, self.bewezene.waarheid))
-
-    def __bool__(self):
-        return True
 
     def beschrijf_tegenstelling(self, tegengestelde_bewijs):
         for i in self, tegengestelde_bewijs:
@@ -116,16 +102,17 @@ class Bewijs:
 
         return( "{}{!s:45}{:26}{:35}".format(self.nummertje(), self.bewezene, gebruikte_dingen, stellingbeschrijving) )
 
+    def leeg_bewijs(self):
+        return Bewijs(self.bewezene, (self,),)
 
 class Ontdekking:
     bewijsefficientie = None
 
     toegestaan = False
-    belangrijke_tussenstap = True
-    ToDoList = []
+    ToDoList = [[] for _ in range(1000000)]
 
     def __eq__(self, other):
-        return self.key() == other.key()
+        return self.__class__ == other.__class__ and self.key() == other.key()
 
     def echtgelijk(self, other):
         return self.key() == other.key() and self.waarheid == other.waarheid
@@ -142,9 +129,8 @@ class Ontdekking:
     def vind_bewijs(self):
         if self.toegestaan:
             a = (self.bewijzen).get(self, [None, None]) [self.waarheid]
-            if a:
-                if a.gebruikt:
-                    return a
+            if a != None and a.gebruikt:
+                return a
         return None
 
     @classmethod
@@ -228,21 +214,28 @@ class Vergelijking(Ontdekking):
 
     def tweecombineren(self, other):
         waarheid = self.waarheid + other.waarheid - 1
-        if waarheid >= 0 :
-            otherverg, otherfact = other.vergelijking, other.extra_factor
-            if self is other:
-                naam = "doubling"
-            else:
-                naam = "combining"
-            for i in range(2):
-                if i:
-                    otherverg = otherverg[::-1]
-                    otherfact = -otherfact
-                non_cancellation = sum(k not in otherverg[1] for k in self.vergelijking[0]) + sum(k not in self.vergelijking[1] for k in otherverg[0])
-                if non_cancellation <= max(2, self.max_grootte[waarheid]):
+        if waarheid == -1:
+            return
+        otherverg, otherfact = other.vergelijking, other.extra_factor
+        if self is other:
+            naam = "doubling"
+        else:
+            naam = "combining"
+        for i in range(2):
+            if i:
+                otherverg = otherverg[::-1]
+                otherfact = -otherfact
+            non_cancellation = sum(k not in otherverg[1] for k in self.vergelijking[0]) + sum(k not in self.vergelijking[1] for k in otherverg[0])
+            if non_cancellation <= max(2, self.max_grootte[waarheid]):
+                if isinstance(self, HoekModx):
+                    if non_cancellation > 1 or len(self.vergelijking[0])>1 or len(otherverg[0])>1:
+                        lastigheid = 10000
+                    else:
+                        lastigheid = 100
+                else:
+                    lastigheid = 1
 
-                    Bewijs(self.__class__((self.vergelijking[0] + otherverg[0], self.vergelijking[1] + otherverg[1]), self.extra_factor + otherfact, bool(waarheid),  gesorteerd = True), (self.bewijs, other.bewijs), naam, 
-                        lastigheid = 1000000 if isinstance(self, HoekModx) and (non_cancellation > 1 or len(self.vergelijking[0])>1 or len(otherverg[0])>1) else 100)# + 1000*isinstance(self, HoekModx))
+                Bewijs(self.__class__((self.vergelijking[0] + otherverg[0], self.vergelijking[1] + otherverg[1]), self.extra_factor + otherfact, bool(waarheid),  gesorteerd = True), (self.bewijs, other.bewijs), naam, lastigheid)
 
     def drie_punten(self):
         if len(self.punten) == 3 and self.grootte == 1:
@@ -903,47 +896,6 @@ class Lijn(Ontdekking):
             return "{} {}{}{} on the {} of {} and {}".format(", ".join(str(punt) for punt in self.punten), meervoud,
             " not" * (not self.waarheid), " in that order" * self.volgorde, figuur, *cirkels)
 
-
-# class Driehoekorientatie(Ontdekking):
-#     bewijzen = {}
-#
-#     @staticmethod
-#     def par_sort(a,b,c,p=False):
-#         if a>b: a, b, p = b, a, not p
-#         if b>c: b, c, p = c, b, not p
-#         if a>b: a, b, p = b, a, not p
-#         return (a, b, c), p
-#
-#     def __init__(self, driehoeken, orientatie, waarheid=True):
-#         self.driehoeken = [[], []]
-#         self.orientatie = orientatie
-#         for i in range(2):
-#             self.driehoeken[i], self.orientatie = self.par_sort(*driehoeken[i], self.orientatie)
-#         self.driehoeken = tuple(sorted(self.driehoeken))
-#         self.waarheid = waarheid
-#
-#         self.toegestaan = True
-#
-#     def key(self):
-#         return(self.driehoeken, self.orientatie)
-#
-#     def bewijs_nieuws(self):
-#         self.gelijkvormig_met_orientatie()
-#
-#     def gelijkvormig_met_orientatie(self):
-#         if self.waarheid:
-#             (A,B,C), (D,E,F) = self.driehoeken
-#             for andersom in range(2):
-#                 for _ in range(3):
-#                     TB = Gelijkvormigheid(((A,B,C), (D,E,F))).vind_bewijs()
-#                     if TB:
-#                         Bewijs(Gelijkvormigheid(((A,B,C), (D,E,F)), (self.orientatie != andersom)), (TB, self.bewijs), "the orientation")
-#                     D,E,F = E,F,D
-#                 E,F = F,E
-#
-#     def __str__(self):
-#         return "▲{}{}{} and ▲{}{}{} have {} orientation".format(*self.driehoeken[0], *self.driehoeken[1], {False:"opposite", True:"equal"} [self.orientatie])
-
 class Gelijkvormigheid(Ontdekking):
     bewijzen = {}
 
@@ -975,20 +927,6 @@ class Gelijkvormigheid(Ontdekking):
             #self.vertel_orientatie()
             #self.vind_orientatie()
             self.hoeken_en_verhoudingen()
-
-
-    # def vertel_orientatie(self):
-    #     if self.orientatie != None:
-    #         if Lijn(self.driehoeken[0], waarheid=False) and not Lijn(self.driehoeken[0], waarheid=True):
-    #             for i in range(2):
-    #                 Bewijs(Driehoekorientatie(self.driehoeken, self.orientatie), (self.bewijs, Lijn(self.driehoeken[i], waarheid=False).vind_bewijs()), "de oriëntatie")
-
-    # def vind_orientatie(self):
-    #     if self.orientatie == None:
-    #         for i in range(2):
-    #             TB = Driehoekorientatie(self.driehoeken, bool(i)).vind_bewijs()
-    #             if TB:
-    #                 Bewijs(Gelijkvormigheid(self.driehoeken, bool(i)), (self.bewijs, TB), "the orientation")
 
     def hoeken_en_verhoudingen(self):
         #de hoeken en verhoudingen die volgen uit de gelijkvormigheid
@@ -1029,10 +967,11 @@ class Gelijkvormigheid(Ontdekking):
                 for i in range(2):
                     if all(h[i]):
                         for lijn in Lijn((A,B,C), waarheid=False), Lijn((D,E,F), waarheid=False):
+                            TB = lijn.vind_bewijs()
+                            if TB == None:
+                                continue
                             for a,b in combinations(h[i], 2):
-                                # if lijn.vind_bewijs() == None:
-                                #     print(lijn, Lijn((A,B,C), waarheid=False))
-                                Bewijs(cls(((A,B,C), (D,E,F)), orientatie=bool(i)), (a, b, lijn.vind_bewijs()), "(AA) similarity")
+                                Bewijs(cls(((A,B,C), (D,E,F)), orientatie=bool(i)), (a, b, TB), "(AA) similarity")
                                 gelukt = True
 
             #zhz
@@ -1091,10 +1030,9 @@ class Gelijkvormigheid(Ontdekking):
                         D2,E2,F2 = [D,E,F][k:] + [D,E,F][:k]
                         for lijn in Lijn((A,B,C), waarheid=False), Lijn((D,E,F), waarheid=False):
                             if lijn.vind_bewijs() == None:
-                                print("AAAAA", Lijn((A,B,C), waarheid=False).vind_bewijs().printen(), h[0][i].bewezene, h[1][j].bewezene)
-                            else:
-                                Bewijs(Verhouding(( ((A2,B2), (D2,F2)), ((A2,C2), (D2,E2)) )), (h[0][i], h[1][j], lijn.vind_bewijs()), "the sine rule", lastigheid = 3)
-                                # de lastigheid moet groot genoeg zijn dat deze stelling niet wordt gebruikt in plaats van (hh) geliujkvormigheid
+                                continue
+                            Bewijs(Verhouding(( ((A2,B2), (D2,F2)), ((A2,C2), (D2,E2)) )), (h[0][i], h[1][j], lijn.vind_bewijs()), "the sine rule", lastigheid = 3)
+                            # de lastigheid moet groot genoeg zijn dat deze stelling niet wordt gebruikt in plaats van (hh) geliujkvormigheid
 
 
 
@@ -1182,20 +1120,29 @@ while True:
 
 
 def DoeToDo():
-    for ontdekking in Ontdekking.ToDoList:
-        ontdekking.bewijs.gebruikt = True
-        if ontdekking.vind_bewijs(): #checking that ontdekking hasn't been proved again in the meantime
-            if should_it_output_everything_that_it_finds:
-                print(ontdekking)#, ontdekking.bewijs.complexiteit)
-            elif should_it_output_some_interesting_found_things:
-                # if not ontdekking.bewijs.triviaal and (isinstance(ontdekking, Cirkel) or isinstance(ontdekking, Gelijkvormigheid) or (isinstance(ontdekking, Lijn) and ontdekking.machtcirkels!=None)):
-                if (isinstance(ontdekking, Cirkel) or isinstance(ontdekking, Gelijkvormigheid) or isinstance(ontdekking, Lijn)):
+    non_empties = []
+    for ontdekkingen in Ontdekking.ToDoList:
+        if ontdekkingen:
+            non_empties.append(ontdekkingen)
+            if len(ontdekkingen) == complexity_levels_per_loop:
+                break
+    if not non_empties:
+        raise Exception("couldn't solve the problem")
+    for ontdekkingen in non_empties:
+        for ontdekking in ontdekkingen:
+            if not ontdekking.vind_bewijs(): #checking that this is the first time working with this ontdekking
+                ontdekking.bewijs.gebruikt = True
+                if should_it_output_everything_that_it_finds:
                     print(ontdekking)#, ontdekking.bewijs.complexiteit)
-            ontdekking.bewijs_nieuws()
-    Ontdekking.ToDoList = []
-    #alles is nu gedaan uit de to do list, dus kan ik hem leeg maken
+                elif should_it_output_some_interesting_found_things:
+                    # if not ontdekking.bewijs.triviaal and (isinstance(ontdekking, Cirkel) or isinstance(ontdekking, Gelijkvormigheid) or (isinstance(ontdekking, Lijn) and ontdekking.machtcirkels!=None)):
+                    if (isinstance(ontdekking, Cirkel) or isinstance(ontdekking, Gelijkvormigheid) or isinstance(ontdekking, Lijn)):
+                        print(ontdekking)#, ontdekking.bewijs.complexiteit)
+                ontdekking.bewijs_nieuws()
+        ontdekkingen.clear()
 
-#stellingen = ((HoekMod180.algemeen_combineren, HoekMod360.algemeen_combineren), (Gelijkvormigheid.gelijkvormig_vinden, Cirkel.Thales))
+
+
 stellingen = (Gelijkvormigheid.gelijkvormig_vinden, Cirkel.Thales, HoekMod360.ingeschreven_cirkel)
 
 t0 = time()
@@ -1203,12 +1150,12 @@ print(ctime(t0))
 DoeToDo()
 
 aantal_bewezen, nieuw_aantal_bewezen = -1, Ontdekking.aantal()
-while aantal_bewezen != nieuw_aantal_bewezen:
+while True:
     print(time() - t0)
 
     for stelling in stellingen:
         stelling()
-        DoeToDo()
+    DoeToDo()
     aantal_bewezen, nieuw_aantal_bewezen = nieuw_aantal_bewezen, Ontdekking.aantal()
 
 
@@ -1443,7 +1390,6 @@ HoekMod360 B,I+B,I=B,A+B,C
 HoekMod360 C,I+C,I=C,A+C,B
 HoekMod180 I,D+=B,C+ 90
 HoekMod180 I,F+=A,B+ 90
-HoekMod180 A,B+C,I=A,I+B,I 90
 
 
 '''
