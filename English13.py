@@ -8,6 +8,7 @@ from collections import defaultdict, Counter
 
 should_it_output_some_interesting_found_things = True
 should_it_output_everything_that_it_finds = False
+allow_proof_by_contradiction = False
 
 
 
@@ -44,7 +45,7 @@ class Bewijs:
     def gebruik_bewijs(self):
         tegengestelde_bewijs, bestaand_bewijs = self.bewezene.bewijzen.get(self.bewezene, (None, None)) [:: 2 * self.bewezene.waarheid - 1]
         #Hier zeg ik dat een bewijs ingewikkelder dan de bestaande oplossing niet mag:
-        self.nuttig = (bestaand_bewijs == None or bestaand_bewijs.complexiteit > self.complexiteit) and (Ontdekking.bewijsefficientie == None or self.complexiteit <= Ontdekking.bewijsefficientie)
+        self.nuttig = (bestaand_bewijs == None or bestaand_bewijs.complexiteit > self.complexiteit) and (Ontdekking.bewijsefficientie == None or self.complexiteit < Ontdekking.bewijsefficientie)
         if self.nuttig:
             self.gebruikt = False
 
@@ -60,11 +61,19 @@ class Bewijs:
             if self.bewezene.waarheid:
                 Bewijs.laatste = self #het is leuk om altijd te weten wat als laatste is bewezen
 
-            if tegengestelde_bewijs != None:
-                #Als er tegenstelling is
-                if Ontdekking.bewijsefficientie == None or Ontdekking.bewijsefficientie > self.complexiteit + tegengestelde_bewijs.complexiteit:
-                    self.beschrijf_tegenstelling(tegengestelde_bewijs)
-                    Ontdekking.bewijsefficientie = self.complexiteit + tegengestelde_bewijs.complexiteit
+            if allow_proof_by_contradiction:
+                if tegengestelde_bewijs != None:
+                    #Als er tegenstelling is
+                    if Ontdekking.bewijsefficientie == None or Ontdekking.bewijsefficientie > self.complexiteit + tegengestelde_bewijs.complexiteit:
+                        self.beschrijf_tegenstelling(tegengestelde_bewijs)
+                        Ontdekking.bewijsefficientie = self.complexiteit + tegengestelde_bewijs.complexiteit
+            else:
+                if self.bewezene == objective:
+                    if Ontdekking.bewijsefficientie == None or Ontdekking.bewijsefficientie > self.complexiteit:
+                        self.printen()
+                        print(time() - t0, "complexity:", self.complexiteit, "\n")
+
+                        Ontdekking.bewijsefficientie = self.complexiteit
 
     def __eq__(self, other):
         return None != other and self.bewezene.echtgelijk(other.bewezene)
@@ -229,10 +238,11 @@ class Vergelijking(Ontdekking):
                 if i:
                     otherverg = otherverg[::-1]
                     otherfact = -otherfact
-                if sum(k not in otherverg[1] for k in self.vergelijking[0]) + sum(k not in self.vergelijking[1] for k in otherverg[0]) <= max(2, self.max_grootte[waarheid]):
+                non_cancellation = sum(k not in otherverg[1] for k in self.vergelijking[0]) + sum(k not in self.vergelijking[1] for k in otherverg[0])
+                if non_cancellation <= max(2, self.max_grootte[waarheid]):
 
-                    Bewijs(self.__class__((self.vergelijking[0] + otherverg[0], self.vergelijking[1] + otherverg[1]), self.extra_factor + otherfact,
-                    bool(waarheid),  gesorteerd = True), (self.bewijs, other.bewijs), naam, lastigheid = 1000000)# + 1000*isinstance(self, HoekModx))
+                    Bewijs(self.__class__((self.vergelijking[0] + otherverg[0], self.vergelijking[1] + otherverg[1]), self.extra_factor + otherfact, bool(waarheid),  gesorteerd = True), (self.bewijs, other.bewijs), naam, 
+                        lastigheid = 1000000 if isinstance(self, HoekModx) and (non_cancellation > 1 or len(self.vergelijking[0])>1 or len(otherverg[0])>1) else 100)# + 1000*isinstance(self, HoekModx))
 
     def drie_punten(self):
         if len(self.punten) == 3 and self.grootte == 1:
@@ -373,8 +383,7 @@ class Hoekenjaging(Bewijs):
         self.modulus = self.soort.modulus
         if len(self.redenen_geordend) != 1:
             self.redenen = set((i for reden in self.redenen_geordend for i in reden.redenen))
-            self.complexiteit = sum((reden.complexiteit for reden in self.redenen), start=len(self.redenen_geordend))
-            self.complexiteit += sum( 1000 * (reden.stelling=="combining") for reden in self.redenen_geordend)
+            self.complexiteit = sum((reden.complexiteit for reden in self.redenen_geordend))
 
             nieuwe_verg = [[],[]]
             for i in self.vergelijking[0], self.vergelijking[-1][::-1]:
@@ -1081,7 +1090,11 @@ class Gelijkvormigheid(Ontdekking):
                         A2,B2,C2 = [A,B,C][k:] + [A,B,C][:k]
                         D2,E2,F2 = [D,E,F][k:] + [D,E,F][:k]
                         for lijn in Lijn((A,B,C), waarheid=False), Lijn((D,E,F), waarheid=False):
-                            Bewijs(Verhouding(( ((A2,B2), (D2,F2)), ((A2,C2), (D2,E2)) )), (h[0][i], h[1][j], lijn.vind_bewijs()), "the sine rule", lastigheid = 10)
+                            if lijn.vind_bewijs() == None:
+                                print("AAAAA", Lijn((A,B,C), waarheid=False).vind_bewijs().printen(), h[0][i].bewezene, h[1][j].bewezene)
+                            else:
+                                Bewijs(Verhouding(( ((A2,B2), (D2,F2)), ((A2,C2), (D2,E2)) )), (h[0][i], h[1][j], lijn.vind_bewijs()), "the sine rule", lastigheid = 3)
+                                # de lastigheid moet groot genoeg zijn dat deze stelling niet wordt gebruikt in plaats van (hh) geliujkvormigheid
 
 
 
@@ -1153,7 +1166,10 @@ print()
 x = input("What shall I prove? ")
 if x:
     soort, *args = verwerk(x)
-    Bewijs(soort(*args, waarheid=False), stelling = "given")
+    if allow_proof_by_contradiction:
+        Bewijs(soort(*args, waarheid=False), stelling = "given")
+    else:
+        objective = soort(*args)
 
 while True:
     print()
@@ -1168,7 +1184,7 @@ while True:
 def DoeToDo():
     for ontdekking in Ontdekking.ToDoList:
         ontdekking.bewijs.gebruikt = True
-        if ontdekking.vind_bewijs():
+        if ontdekking.vind_bewijs(): #checking that ontdekking hasn't been proved again in the meantime
             if should_it_output_everything_that_it_finds:
                 print(ontdekking)#, ontdekking.bewijs.complexiteit)
             elif should_it_output_some_interesting_found_things:
@@ -1396,13 +1412,29 @@ HoekMod180 D,K+A,L=A,K+K,L
 
 
 '''
+# lemma 7 (i)
+'''
+A B C I P E D
+Lijn D,E,P
+Lijn A,B,C None False False
+Lijn A,E,C None True
+Lijn B,D,C None True
+Verhouding A,E+=E,C+
+Verhouding B,D+=D,C+
+HoekMod360 A,I+A,I=A,B+A,C
+HoekMod360 B,I+B,I=B,A+B,C
+HoekMod360 C,I+C,I=C,A+C,B
+Lijn A,I,P
+HoekMod180 A,P+=C,P+ 90
+
+
+'''
 # lemma 7 (ii)
 '''
-A B C D E F I P
-Lijn D,P,F
+A B C D F I P
+Lijn D,F,P
 Lijn A,B,C None False False
 Lijn A,B,F
-Lijn A,E,C
 Lijn D,B,C
 Lijn A,I,P
 HoekMod180 A,P+=C,P+ 90
@@ -1410,8 +1442,8 @@ HoekMod360 A,I+A,I=A,B+A,C
 HoekMod360 B,I+B,I=B,A+B,C
 HoekMod360 C,I+C,I=C,A+C,B
 HoekMod180 I,D+=B,C+ 90
-HoekMod180 I,E+=A,C+ 90
 HoekMod180 I,F+=A,B+ 90
+HoekMod180 A,B+C,I=A,I+B,I 90
 
 
 '''
