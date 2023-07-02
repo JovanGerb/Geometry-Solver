@@ -9,7 +9,7 @@ from collections import defaultdict, Counter
 should_it_output_some_interesting_found_things = True
 should_it_output_everything_that_it_finds = False
 allow_proof_by_contradiction = False
-complexity_levels_per_loop = 30
+complexity_levels_per_loop = 20
 
 
 class Bewijs:
@@ -1361,13 +1361,13 @@ HoekMod180 D,K+A,L=A,K+K,L
 '''
 # lemma 7 (i)
 '''
-A B C I P E D
-Lijn D,E,P
+A B C I P X Y
+Lijn Y,X,P
 Lijn A,B,C None False False
-Lijn A,E,C None True
-Lijn B,D,C None True
-Verhouding A,E+=E,C+
-Verhouding B,D+=D,C+
+Lijn A,X,C None True
+Lijn B,Y,C None True
+Verhouding A,X+=X,C+
+Verhouding B,Y+=Y,C+
 HoekMod360 A,I+A,I=A,B+A,C
 HoekMod360 B,I+B,I=B,A+B,C
 HoekMod360 C,I+C,I=C,A+C,B
