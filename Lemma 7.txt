@@ -29,7 +29,7 @@ Point P lies on line DF where D and F are the points of tangency of the incircle
 
 
 
-Point P lies on DE where D and E are the midpoints of segments BC and AC.
+Point P lies on XY where X and Y are the midpoints of segments AC and BC.
 
 (001)B, Y, C lie in that order on a line                                     because of given
 (002)A, X, C lie in that order on a line                                     because of given
